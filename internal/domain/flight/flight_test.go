@@ -177,7 +177,7 @@ func TestCalculatePrice(t *testing.T) {
 	bookingDate := time.Now()
 
 	t.Run("MoreThan30Days", func(t *testing.T) {
-		price := CalculatePrice(base, departure, bookingDate, 0)
+		price := CalculatePrice(base, departure, bookingDate, 0, false)
 		expected := base * 0.9
 		if price != expected {
 			t.Errorf("expected %.2f, got %.2f", expected, price)
@@ -186,7 +186,7 @@ func TestCalculatePrice(t *testing.T) {
 
 	t.Run("LessThanOrEqual7Days", func(t *testing.T) {
 		dep := time.Now().Add(5 * 24 * time.Hour)
-		price := CalculatePrice(base, dep, bookingDate, 0)
+		price := CalculatePrice(base, dep, bookingDate, 0, false)
 		expected := base * 1.2
 		if price != expected {
 			t.Errorf("expected %.2f, got %.2f", expected, price)
@@ -195,7 +195,7 @@ func TestCalculatePrice(t *testing.T) {
 
 	t.Run("Between8And30Days", func(t *testing.T) {
 		dep := time.Now().Add(15 * 24 * time.Hour)
-		price := CalculatePrice(base, dep, bookingDate, 0)
+		price := CalculatePrice(base, dep, bookingDate, 0, false)
 		expected := base
 		if price != expected {
 			t.Errorf("expected %.2f, got %.2f", expected, price)
@@ -203,8 +203,16 @@ func TestCalculatePrice(t *testing.T) {
 	})
 
 	t.Run("WithBookedRatio", func(t *testing.T) {
-		price := CalculatePrice(base, departure, bookingDate, 0.5)
+		price := CalculatePrice(base, departure, bookingDate, 0.5, false)
 		expected := base * 0.9 * 1.5
+		if price != expected {
+			t.Errorf("expected %.2f, got %.2f", expected, price)
+		}
+	})
+
+	t.Run("FrequentFlyerDiscount", func(t *testing.T) {
+		price := CalculatePrice(base, departure, bookingDate, 0.2, true)
+		expected := base * 0.9 * 1.2 * 0.95
 		if price != expected {
 			t.Errorf("expected %.2f, got %.2f", expected, price)
 		}

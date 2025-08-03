@@ -25,18 +25,18 @@ func BestSeat(seats []*Seat, col, row int) *Seat {
 	return seats[0]
 }
 
-func CalculatePrice(base float64, departure, bookingDate time.Time, bookedRatio float64) float64 {
-	daysDiff := int(departure.Sub(bookingDate).Hours() / 24)
-	var price = base
-
+func CalculatePrice(base float64, departure, bookingDate time.Time, bookedRatio float64, isFrequentFlyer bool) float64 {
+	price := base
+	days := int(departure.Sub(bookingDate).Hours() / 24)
 	switch {
-	case daysDiff > 30:
+	case days >= 30:
 		price *= 0.9
-	case daysDiff <= 7:
+	case days <= 7:
 		price *= 1.2
 	}
-
 	price *= (1 + bookedRatio)
-
+	if isFrequentFlyer {
+		price *= 0.95 // 5% discount
+	}
 	return price
 }
