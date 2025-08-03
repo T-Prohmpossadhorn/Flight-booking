@@ -82,7 +82,7 @@ func (s *Service) BookSeat(passengerID, flightID, class string, now time.Time) (
 	adapter := &bookingFlightAdapter{Flight: flightObj}
 	seat, price, err := booking.BookBestSeat(adapter, class, bestSeatFunc, flight.CalculatePrice, isFrequentFlyer)
 	if err != nil && errors.Is(err, booking.ErrNoSeatAvailable) {
-		upgradeClass, upErr := tryUpgradeClass(flightObj, class)
+		upgradeClass, upErr := s.tryUpgradeClass(flightObj, class)
 		if upErr == nil {
 			seat, price, err = booking.BookBestSeat(adapter, upgradeClass, bestSeatFunc, flight.CalculatePrice, isFrequentFlyer)
 			if err != nil {

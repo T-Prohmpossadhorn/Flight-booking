@@ -216,9 +216,11 @@ func TestService_HelperFunctions(t *testing.T) {
 				"Business": {},
 			},
 		}
-		class, err := tryUpgradeClass(f, "Economy")
+		svc := &Service{}
+		svc.SetSeatClassPriority([]string{"Economy", "Business"})
+		class, err := svc.tryUpgradeClass(f, "Economy")
 		if err != nil || class != "Business" {
-			t.Error("should upgrade to Business")
+			t.Errorf("should upgrade to Business, got %s, err: %v", class, err)
 		}
 	})
 	t.Run("tryUpgradeClass fail", func(t *testing.T) {
@@ -227,7 +229,8 @@ func TestService_HelperFunctions(t *testing.T) {
 				"Economy": {},
 			},
 		}
-		_, err := tryUpgradeClass(f, "Economy")
+		svc := &Service{}
+		_, err := svc.tryUpgradeClass(f, "Economy")
 		if err == nil {
 			t.Error("should not upgrade")
 		}
@@ -239,7 +242,8 @@ func TestService_HelperFunctions(t *testing.T) {
 				"Business": {},
 			},
 		}
-		classes := classList(f)
+		svc := &Service{}
+		classes := svc.classList(f)
 		if len(classes) != 2 {
 			t.Error("expected 2 classes")
 		}
@@ -253,9 +257,42 @@ func TestService_HelperFunctions(t *testing.T) {
 }
 
 func TestService_BookSeat_UpgradePath(t *testing.T) {
-	t.Run("UpgradeToBusiness", func(t *testing.T) {
+	t.Run("UpgradeToBusinessWithPriority", func(t *testing.T) {
 		f := &flight.Flight{
 			FlightID:    "F4",
+			Origin:      "BKK",
+			Destination: "JFK",
+			Departure:   time.Now().Add(24 * time.Hour),
+			Seats: map[flight.SeatClass][]*flight.Seat{
+				"Economy":  {{SeatID: "1A", Row: 1, Column: 1, IsBooked: true}},
+				"Business": {{SeatID: "2A", Row: 1, Column: 1, IsBooked: false}},
+				"First":    {{SeatID: "3A", Row: 1, Column: 1, IsBooked: false}},
+			},
+			Columns:    map[flight.SeatClass]int{"Economy": 1, "Business": 1, "First": 1},
+			Rows:       map[flight.SeatClass]int{"Economy": 1, "Business": 1, "First": 1},
+			BasePrices: map[flight.SeatClass]float64{"Economy": 1000, "Business": 2000, "First": 3000},
+			Mutex: map[flight.SeatClass]*sync.Mutex{
+				"Economy":  new(sync.Mutex),
+				"Business": new(sync.Mutex),
+				"First":    new(sync.Mutex),
+			},
+		}
+		passengerStore := &mockPassengerStorage{bookings: map[string]*passenger.BookingInfo{}}
+		svc := NewService([]*flight.Flight{f}, passengerStore)
+		// Set custom priority: Economy -> First -> Business
+		svc.SetSeatClassPriority([]string{"Economy", "First", "Business"})
+		bk, err := svc.BookSeat("P1", "F4", "Economy", time.Now())
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if bk.SeatClass != "First" {
+			t.Errorf("expected upgrade to First, got %s", bk.SeatClass)
+		}
+	})
+
+	t.Run("UpgradeToBusinessDefaultOrder", func(t *testing.T) {
+		f := &flight.Flight{
+			FlightID:    "F5",
 			Origin:      "BKK",
 			Destination: "JFK",
 			Departure:   time.Now().Add(24 * time.Hour),
@@ -273,12 +310,36 @@ func TestService_BookSeat_UpgradePath(t *testing.T) {
 		}
 		passengerStore := &mockPassengerStorage{bookings: map[string]*passenger.BookingInfo{}}
 		svc := NewService([]*flight.Flight{f}, passengerStore)
-		bk, err := svc.BookSeat("P1", "F4", "Economy", time.Now())
+		// No priority set, should upgrade to Business (default order)
+		bk, err := svc.BookSeat("P1", "F5", "Economy", time.Now())
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if bk.SeatClass != "Business" {
 			t.Errorf("expected upgrade to Business, got %s", bk.SeatClass)
+		}
+	})
+
+	t.Run("NoUpgradeAvailableWithPriority", func(t *testing.T) {
+		f := &flight.Flight{
+			FlightID:    "F6",
+			Origin:      "BKK",
+			Destination: "JFK",
+			Departure:   time.Now().Add(24 * time.Hour),
+			Seats: map[flight.SeatClass][]*flight.Seat{
+				"Economy": {{SeatID: "1A", Row: 1, Column: 1, IsBooked: true}},
+			},
+			Columns:    map[flight.SeatClass]int{"Economy": 1},
+			Rows:       map[flight.SeatClass]int{"Economy": 1},
+			BasePrices: map[flight.SeatClass]float64{"Economy": 1000},
+			Mutex:      map[flight.SeatClass]*sync.Mutex{"Economy": new(sync.Mutex)},
+		}
+		passengerStore := &mockPassengerStorage{bookings: map[string]*passenger.BookingInfo{}}
+		svc := NewService([]*flight.Flight{f}, passengerStore)
+		svc.SetSeatClassPriority([]string{"Economy", "Business", "First"})
+		_, err := svc.BookSeat("P1", "F6", "Economy", time.Now())
+		if err == nil {
+			t.Error("expected error for no seat available and no upgrade")
 		}
 	})
 }
