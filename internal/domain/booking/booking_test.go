@@ -16,7 +16,7 @@ func dummyBestSeat(seats []booking.Seat, col, row int) booking.Seat {
 	return seats[0]
 }
 
-func dummyCalcPrice(base float64, departure, bookingDate time.Time, bookedRatio float64) float64 {
+func dummyCalcPrice(base float64, departure, bookingDate time.Time, bookedRatio float64, isFrequentFlyer bool) float64 {
 	return base + bookedRatio*100
 }
 
@@ -42,7 +42,7 @@ func TestBookBestSeat_Success(t *testing.T) {
 	mockSeat.On("SetBooked", true).Return()
 	mockSeat.On("IsBookedSeat").Return(true)
 
-	seat, price, err := booking.BookBestSeat(mockFlight, "Economy", dummyBestSeat, dummyCalcPrice)
+	seat, price, err := booking.BookBestSeat(mockFlight, "Economy", dummyBestSeat, dummyCalcPrice, false)
 	assert.NoError(t, err)
 	assert.Equal(t, mockSeat, seat)
 	assert.Equal(t, 1100.0, price)
@@ -67,7 +67,7 @@ func TestBookBestSeat_AllBooked(t *testing.T) {
 	mockSeat.On("IsBookedSeat").Return(true)
 	mockSeat.On("GetSpecial").Return("")
 
-	seat, price, err := booking.BookBestSeat(mockFlight, "Economy", dummyBestSeat, dummyCalcPrice)
+	seat, price, err := booking.BookBestSeat(mockFlight, "Economy", dummyBestSeat, dummyCalcPrice, false)
 	assert.ErrorIs(t, err, booking.ErrNoSeatAvailable)
 	assert.Nil(t, seat)
 	assert.Equal(t, 0.0, price)
@@ -77,7 +77,7 @@ func TestBookBestSeat_NoSuchClass(t *testing.T) {
 	mockFlight := new(mocks.Flight)
 	mockFlight.On("GetMutex", "NonExist").Return(nil)
 
-	seat, price, err := booking.BookBestSeat(mockFlight, "NonExist", dummyBestSeat, dummyCalcPrice)
+	seat, price, err := booking.BookBestSeat(mockFlight, "NonExist", dummyBestSeat, dummyCalcPrice, false)
 	assert.ErrorIs(t, err, booking.ErrNoSeatAvailable)
 	assert.Nil(t, seat)
 	assert.Equal(t, 0.0, price)
@@ -97,7 +97,7 @@ func TestBookBestSeat_EmptySeats(t *testing.T) {
 	mockMutex.On("Lock").Return()
 	mockMutex.On("Unlock").Return()
 
-	seat, price, err := booking.BookBestSeat(mockFlight, "Economy", dummyBestSeat, dummyCalcPrice)
+	seat, price, err := booking.BookBestSeat(mockFlight, "Economy", dummyBestSeat, dummyCalcPrice, false)
 	assert.ErrorIs(t, err, booking.ErrNoSeatAvailable)
 	assert.Nil(t, seat)
 	assert.Equal(t, 0.0, price)
