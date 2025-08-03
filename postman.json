@@ -1,0 +1,96 @@
+{
+  "info": {
+    "name": "Flight Booking API Example",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Add Flight",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"flight_id\": \"AB123\",\n  \"origin\": \"JFK\",\n  \"destination\": \"LAX\",\n  \"departure\": \"2024-07-10 08:00\",\n  \"arrival\": \"2024-07-10 11:00\",\n  \"aircraft\": \"Boeing 777\",\n  \"seat_layout\": {\n    \"Economy\": [\n      [ { \"special\": \"\" }, { \"special\": \"\" } ],\n      [ { \"special\": \"\" }, { \"special\": \"\" } ]\n    ],\n    \"Business\": [\n      [ { \"special\": \"\" } ]\n    ]\n  },\n  \"base_prices\": {\n    \"Economy\": 300,\n    \"Business\": 1000\n  }\n}"
+        },
+        "url": { "raw": "http://localhost:8080/flights", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["flights"] }
+      }
+    },
+    {
+      "name": "Get Flight",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "http://localhost:8080/flights/AB123", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["flights", "AB123"] }
+      }
+    },
+    {
+      "name": "Book Seat (Economy)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"passenger_id\": \"P001\",\n  \"flight_id\": \"AB123\",\n  \"seat_class\": \"Economy\",\n  \"booking_date\": \"2024-07-01\"\n}"
+        },
+        "url": { "raw": "http://localhost:8080/book", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["book"] }
+      }
+    },
+    {
+      "name": "Book Seat (No Seat Available)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"passenger_id\": \"P002\",\n  \"flight_id\": \"AB123\",\n  \"seat_class\": \"Economy\",\n  \"booking_date\": \"2024-07-01\"\n}"
+        },
+        "url": { "raw": "http://localhost:8080/book", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["book"] }
+      }
+    },
+    {
+      "name": "Book Seat (Upgrade Suggestion)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"passenger_id\": \"P003\",\n  \"flight_id\": \"AB123\",\n  \"seat_class\": \"Economy\",\n  \"booking_date\": \"2024-07-01\"\n}"
+        },
+        "url": { "raw": "http://localhost:8080/book", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["book"] }
+      }
+    },
+    {
+      "name": "Cancel Booking",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"booking_id\": \"<PASTE_BOOKING_ID_FROM_BOOK_SEAT_RESPONSE>\"\n}"
+        },
+        "url": { "raw": "http://localhost:8080/cancel", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["cancel"] }
+      }
+    },
+    {
+      "name": "Get Flight Not Found",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "http://localhost:8080/flights/NOTFOUND", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["flights", "NOTFOUND"] }
+      }
+    },
+    {
+      "name": "Book Seat Invalid Data",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{bad json}"
+        },
+        "url": { "raw": "http://localhost:8080/book", "protocol": "http", "host": ["localhost"], "port": "8080", "path": ["book"] }
+      }
+    }
+  ]
+}

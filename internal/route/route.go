@@ -25,8 +25,10 @@ func AddFlightHandler(c *gin.Context) {
 		return
 	}
 	fl := flight.InitializeFlight(req.FlightID, req.Origin, req.Destination, req.Aircraft, dep, arr)
+	classPriority := make([]string, 0)
 	for class, layout := range req.SeatLayout {
 		seatLayout := [][]*flight.Seat{}
+		classPriority = append(classPriority, class)
 		for r, row := range layout {
 			seatRow := []*flight.Seat{}
 			for c, seat := range row {
@@ -41,6 +43,7 @@ func AddFlightHandler(c *gin.Context) {
 		fl.AddSeatClass(flight.SeatClass(class), seatLayout, req.BasePrices[class])
 	}
 	service.AddFlight(fl)
+	service.SetSeatClassPriority(classPriority)
 	c.JSON(http.StatusOK, gin.H{"status": "Flight added"})
 }
 

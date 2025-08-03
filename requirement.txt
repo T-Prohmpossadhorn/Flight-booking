@@ -1,0 +1,98 @@
+Manager/Senior Software Engineer Coding 
+Challenge Overview: 
+The goal is to design and implement a flight booking system that allows passengers to book, cancel, and manage their seats. The system should handle dynamic seat allocations, pricing rules, and class upgrades. This challenge tests the candidate’s ability to structure data efficiently, handle concurrent booking requests, and implement a robust seat assignment algorithm. 
+Challenge: Flight Booking & Seat Allocation System 
+System Requirements: 
+1. Flight & Seat Specifications: 
+● Each flight has a fixed number of seats, categorized into: 
+    ○ Economy Class 
+    ○ Business Class 
+    ○ First Class 
+● Seats are represented as a grid layout (rows & columns), e.g., 10 rows x 6 seats per row. 
+● Some seats may be blocked for special requests (e.g., wheelchair access). 2. Booking & Cancellation: 
+● Passengers can search for available flights based on origin, destination, and date. ● A passenger can book a seat, and the system should auto-assign the best available seat in their chosen class. 
+● If a class is fully booked, passengers should have the option to upgrade to a higher class. 
+● Passengers can cancel bookings, making the seat available for new passengers. ● If a cancellation occurs close to departure, a cancellation fee may apply. 
+3. Pricing Rules & Dynamic Adjustments: 
+● Ticket prices depend on seat class and booking time: 
+    ○ Early bookings (e.g., 30+ days before departure) get a 10% discount. ○ Standard bookings (e.g., 7-29 days before departure) have no price change. ○ Last-minute bookings (e.g., within 7 days of departure) incur a 20% surcharge. 
+● Dynamic pricing: The more seats are booked, the higher the price for remaining seats. ● Frequent flyers may get special discounts or automatic upgrades if seats are available. 
+Input & Output Specifications:
+1. Inputs: 
+flights (list): Available flights with seat configurations. [ 
+{ 
+"flight_id": "AB123", 
+"origin": "JFK", 
+"destination": "LAX", 
+"departure": "2024-07-10 08:00", 
+"seats": { 
+"Economy": {"total": 100, "available": 80, "base_price": 300}, "Business": {"total": 30, "available": 10, "base_price": 1000}, "First": {"total": 10, "available": 5, "base_price": 3000} } 
+} 
+] 
+booking_request (dict): Passenger booking details. { 
+"passenger_id": "P001", 
+"flight_id": "AB123", 
+"seat_class": "Economy", 
+"booking_date": "2024-06-01" # Date of booking 
+} 
+2. Outputs: 
+If a booking is successful, return a confirmation with seat details:
+{ 
+"booking_id": "B12345", 
+"passenger_id": "P001", 
+"flight_id": "AB123", 
+"seat": "12B", 
+"price": 270, # 300 - 10% discount for early booking "status": "Confirmed" 
+} 
+If the booking cannot be processed, return an error message: { 
+"error": "No seats available in Economy. Upgrade to Business?" } 
+If a cancellation request is processed, return: 
+{ 
+"booking_id": "B12345", 
+"status": "Cancelled", 
+"refund_amount": 200 
+} 
+Example Scenarios: 
+Scenario 1: Successful Booking with Early Discount Given: 
+booking_request = { 
+"passenger_id": "P001", 
+"flight_id": "AB123",
+"seat_class": "Economy", 
+"booking_date": "2024-06-01" # More than 30 days before departure } 
+Expected Output: 
+{ 
+"booking_id": "B12345", 
+"passenger_id": "P001", 
+"flight_id": "AB123", 
+"seat": "12B", 
+"price": 270, 
+"status": "Confirmed" 
+} 
+Scenario 2: Last-Minute Booking with Increased Price Given: 
+booking_request = { 
+"passenger_id": "P002", 
+"flight_id": "AB123", 
+"seat_class": "Economy", 
+"booking_date": "2024-07-05" # Less than 7 days before departure } 
+Expected Output: 
+{ 
+"booking_id": "B67890", 
+"passenger_id": "P002",
+"flight_id": "AB123", 
+"seat": "14C", 
+"price": 360, 
+"status": "Confirmed" 
+} 
+Design Requirements: 
+● Implement OOP-based flight management with at least: 
+    ○ Flight: Represents flight details, seat assignments, and pricing. 
+    ○ BookingSystem: Handles booking, cancellations, and price adjustments. ○ Passenger: Stores passenger details and booking history. 
+● The seat allocation algorithm should prioritize filling seats in an orderly manner (e.g., front to back, window seats first). 
+● Implement concurrent handling (multithreading/async processing) to support multiple passengers booking at the same time. 
+● Data should be stored in-memory (or optionally support a database like SQLite). Testing Requirements: 
+● Use pytest or unittest (or equivalent in other languages). 
+● Test cases should cover: 
+    ○ Booking in all seat classes. 
+    ○ Dynamic pricing adjustments. 
+    ○ Cancellation with and without refund. 
+    ○ Edge cases like full flights or booking failures.

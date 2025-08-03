@@ -33,7 +33,6 @@ func sameDay(a, b time.Time) bool {
 	return y1 == y2 && m1 == m2 && d1 == d2
 }
 
-// Now a method on Service, uses priority if set
 func (s *Service) tryUpgradeClass(f *flight.Flight, currentClass string) (string, error) {
 	classes := s.classList(f)
 	for i, c := range classes {
@@ -44,7 +43,6 @@ func (s *Service) tryUpgradeClass(f *flight.Flight, currentClass string) (string
 	return "", errors.New("no higher class available")
 }
 
-// Helper to get all seat classes for a flight, in priority order if set
 func (s *Service) classList(f *flight.Flight) []string {
 	if len(s.SeatClassPriority) > 0 {
 		var present []string
@@ -62,7 +60,6 @@ func (s *Service) classList(f *flight.Flight) []string {
 	return classes
 }
 
-// Dummy booking ID generator (replace with real one)
 func generateBookingID() string {
 	return uuid.New().String()
 }
