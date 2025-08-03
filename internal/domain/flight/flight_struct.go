@@ -7,6 +7,23 @@ import (
 )
 
 type SeatClass string
+type MutexAdapter sync.Mutex
+
+var ErrNoSeatAvailable = errors.New("no seat available")
+
+type SeatInterface interface {
+	GetSeatID() string
+	GetRow() int
+	GetColumn() int
+	GetSpecial() string
+	IsBookedSeat() bool
+	SetBooked(bool)
+}
+
+type MutexInterface interface {
+	Lock()
+	Unlock()
+}
 
 type Seat struct {
 	SeatID   string
@@ -29,5 +46,3 @@ type Flight struct {
 	Aircraft    string
 	Mutex       map[SeatClass]*sync.Mutex
 }
-
-var errNoSeatAvailable = errors.New("no seat available")

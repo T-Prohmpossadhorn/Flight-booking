@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func bestSeat(seats []*Seat, col, row int) *Seat {
+func BestSeat(seats []*Seat, col, row int) *Seat {
 	if len(seats) == 0 {
 		return nil
 	}
@@ -25,7 +25,7 @@ func bestSeat(seats []*Seat, col, row int) *Seat {
 	return seats[0]
 }
 
-func calculatePrice(base float64, departure, bookingDate time.Time, bookedRatio float64) float64 {
+func CalculatePrice(base float64, departure, bookingDate time.Time, bookedRatio float64) float64 {
 	daysDiff := int(departure.Sub(bookingDate).Hours() / 24)
 	var price = base
 

@@ -1,6 +1,7 @@
 package flight
 
 import (
+	"sync"
 	"testing"
 	"time"
 )
@@ -57,6 +58,16 @@ func TestAddSeatClass(t *testing.T) {
 			t.Errorf("expected base price to remain 500.0, got %f", flight.BasePrices["Economy"])
 		}
 	})
+
+	t.Run("AddSeatClassEmptyLayout", func(t *testing.T) {
+		flight := InitializeFlight("FL300", "BKK", "SIN", "Boeing 737", time.Now(), time.Now().Add(2*time.Hour))
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("expected panic on empty layout")
+			}
+		}()
+		flight.AddSeatClass("Economy", [][]*Seat{}, 500.0)
+	})
 }
 
 func TestGetAvailableSeats(t *testing.T) {
@@ -87,92 +98,16 @@ func TestGetAvailableSeats(t *testing.T) {
 			t.Errorf("expected 0 available seats, got %d", len(available))
 		}
 	})
-}
 
-func TestBookBestSeat(t *testing.T) {
-	t.Run("BookBestSeatSuccess", func(t *testing.T) {
-		flight := InitializeFlight("FL126", "BKK", "CDG", "Boeing 787", time.Now(), time.Now().Add(12*time.Hour))
+	t.Run("AllSeatsSpecialOrBooked", func(t *testing.T) {
+		flight := InitializeFlight("FL204", "BKK", "SYD", "Boeing 737", time.Now(), time.Now().Add(9*time.Hour))
 		layout := [][]*Seat{
-			{&Seat{}, &Seat{}, &Seat{}},
+			{{Special: "Blocked"}, {Special: "Blocked"}},
 		}
-		flight.AddSeatClass("First", layout, 5000.0)
-
-		seat, price, err := flight.BookBestSeat("First", bestSeat)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if !seat.IsBooked {
-			t.Errorf("seat should be booked")
-		}
-		if price <= 0 {
-			t.Errorf("price should be positive, got %f", price)
-		}
-
-		for i := 0; i < 2; i++ {
-			_, price, err := flight.BookBestSeat("First", bestSeat)
-			if err != nil {
-				break
-			}
-			if price <= 0 {
-				t.Errorf("price should be positive, got %f", price)
-			}
-		}
-
-		_, _, err = flight.BookBestSeat("First", bestSeat)
-		if err == nil {
-			t.Errorf("expected error when booking with no seats available")
-		}
-	})
-
-	t.Run("BookBestSeatNoSeats", func(t *testing.T) {
-		flight := InitializeFlight("FL201", "BKK", "HND", "Boeing 737", time.Now(), time.Now().Add(6*time.Hour))
-		_, _, err := flight.BookBestSeat("Economy", bestSeat)
-		if err == nil {
-			t.Errorf("expected error when booking with no seat class")
-		}
-	})
-
-	t.Run("BookBestSeatAllSpecial", func(t *testing.T) {
-		flight := InitializeFlight("FL202", "BKK", "ICN", "Boeing 737", time.Now(), time.Now().Add(6*time.Hour))
-		layout := [][]*Seat{
-			{{Special: "Blocked"}},
-		}
-		flight.AddSeatClass("Economy", layout, 800.0)
-		_, _, err := flight.BookBestSeat("Economy", bestSeat)
-		if err == nil {
-			t.Errorf("expected error when all seats are special")
-		}
-	})
-
-	t.Run("ConcurrentBookBestSeat", func(t *testing.T) {
-		flight := InitializeFlight("FL205", "BKK", "LAX", "Boeing 777", time.Now(), time.Now().Add(15*time.Hour))
-		layout := [][]*Seat{
-			{&Seat{}, &Seat{}, &Seat{}},
-		}
-		flight.AddSeatClass("Business", layout, 3000.0)
-
-		done := make(chan struct{})
-		for i := 0; i < 3; i++ {
-			go func() {
-				_, price, _ := flight.BookBestSeat("Business", bestSeat)
-				if price <= 0 {
-					t.Errorf("price should be positive, got %f", price)
-				}
-				done <- struct{}{}
-			}()
-		}
-		timeout := time.After(2 * time.Second)
-		for i := 0; i < 3; i++ {
-			select {
-			case <-done:
-			case <-timeout:
-				t.Fatal("timeout waiting for goroutines")
-			}
-		}
-		for _, seat := range flight.Seats["Business"] {
-			if !seat.IsBooked {
-				t.Errorf("expected all seats to be booked")
-			}
+		flight.AddSeatClass("Economy", layout, 1000.0)
+		available := flight.getAvailableSeats("Economy")
+		if len(available) != 0 {
+			t.Errorf("expected 0 available seats, got %d", len(available))
 		}
 	})
 }
@@ -195,7 +130,7 @@ func TestSeatIDFormat(t *testing.T) {
 
 func TestBestSeat(t *testing.T) {
 	t.Run("EmptySeats", func(t *testing.T) {
-		if bestSeat([]*Seat{}, 3, 3) != nil {
+		if BestSeat([]*Seat{}, 3, 3) != nil {
 			t.Errorf("expected nil for empty seat slice")
 		}
 	})
@@ -207,7 +142,7 @@ func TestBestSeat(t *testing.T) {
 			{Row: 1, Column: 3}, // window
 			{Row: 1, Column: 2},
 		}
-		seat := bestSeat(seats, 3, 3)
+		seat := BestSeat(seats, 3, 3)
 		if seat.Column != 1 && seat.Column != 3 {
 			t.Errorf("expected aisle/window seat, got column %d", seat.Column)
 		}
@@ -218,7 +153,7 @@ func TestBestSeat(t *testing.T) {
 			{Row: 2, Column: 1},
 			{Row: 1, Column: 2},
 		}
-		seat := bestSeat(seats, 2, 2)
+		seat := BestSeat(seats, 2, 2)
 		if seat.Row != 1 {
 			t.Errorf("expected front row seat, got row %d", seat.Row)
 		}
@@ -229,7 +164,7 @@ func TestBestSeat(t *testing.T) {
 			{Row: 1, Column: 2},
 			{Row: 1, Column: 1},
 		}
-		seat := bestSeat(seats, 2, 2)
+		seat := BestSeat(seats, 2, 2)
 		if seat.Column != 1 {
 			t.Errorf("expected lower column seat, got column %d", seat.Column)
 		}
@@ -242,7 +177,7 @@ func TestCalculatePrice(t *testing.T) {
 	bookingDate := time.Now()
 
 	t.Run("MoreThan30Days", func(t *testing.T) {
-		price := calculatePrice(base, departure, bookingDate, 0)
+		price := CalculatePrice(base, departure, bookingDate, 0)
 		expected := base * 0.9
 		if price != expected {
 			t.Errorf("expected %.2f, got %.2f", expected, price)
@@ -251,7 +186,7 @@ func TestCalculatePrice(t *testing.T) {
 
 	t.Run("LessThanOrEqual7Days", func(t *testing.T) {
 		dep := time.Now().Add(5 * 24 * time.Hour)
-		price := calculatePrice(base, dep, bookingDate, 0)
+		price := CalculatePrice(base, dep, bookingDate, 0)
 		expected := base * 1.2
 		if price != expected {
 			t.Errorf("expected %.2f, got %.2f", expected, price)
@@ -260,7 +195,7 @@ func TestCalculatePrice(t *testing.T) {
 
 	t.Run("Between8And30Days", func(t *testing.T) {
 		dep := time.Now().Add(15 * 24 * time.Hour)
-		price := calculatePrice(base, dep, bookingDate, 0)
+		price := CalculatePrice(base, dep, bookingDate, 0)
 		expected := base
 		if price != expected {
 			t.Errorf("expected %.2f, got %.2f", expected, price)
@@ -268,10 +203,108 @@ func TestCalculatePrice(t *testing.T) {
 	})
 
 	t.Run("WithBookedRatio", func(t *testing.T) {
-		price := calculatePrice(base, departure, bookingDate, 0.5)
+		price := CalculatePrice(base, departure, bookingDate, 0.5)
 		expected := base * 0.9 * 1.5
 		if price != expected {
 			t.Errorf("expected %.2f, got %.2f", expected, price)
 		}
 	})
+}
+
+func TestSeatInterfaceMethods(t *testing.T) {
+	seat := &Seat{
+		SeatID:   "A1",
+		Row:      1,
+		Column:   1,
+		Special:  "VIP",
+		IsBooked: false,
+	}
+	if seat.GetSeatID() != "A1" {
+		t.Errorf("GetSeatID failed")
+	}
+	if seat.GetRow() != 1 {
+		t.Errorf("GetRow failed")
+	}
+	if seat.GetColumn() != 1 {
+		t.Errorf("GetColumn failed")
+	}
+	if seat.GetSpecial() != "VIP" {
+		t.Errorf("GetSpecial failed")
+	}
+	if seat.IsBookedSeat() {
+		t.Errorf("IsBookedSeat should be false")
+	}
+	seat.SetBooked(true)
+	if !seat.IsBookedSeat() {
+		t.Errorf("SetBooked or IsBookedSeat failed")
+	}
+}
+
+func TestFlightInterfaceMethods(t *testing.T) {
+	flight := &Flight{
+		FlightID:    "F1",
+		Origin:      "BKK",
+		Destination: "JFK",
+		Departure:   time.Now(),
+		Arrival:     time.Now().Add(10 * time.Hour),
+		Columns:     map[SeatClass]int{"Economy": 2},
+		Rows:        map[SeatClass]int{"Economy": 3},
+		Seats: map[SeatClass][]*Seat{
+			"Economy": {
+				{SeatID: "A1"}, {SeatID: "A2"},
+				{SeatID: "B1"}, {SeatID: "B2"},
+				{SeatID: "C1"}, {SeatID: "C2"},
+			},
+		},
+		BasePrices: map[SeatClass]float64{"Economy": 1000.0},
+		Aircraft:   "Boeing 777",
+		Mutex:      map[SeatClass]*sync.Mutex{"Economy": &sync.Mutex{}},
+	}
+
+	// GetSeats returns correct interface slice
+	seats := flight.GetSeats("Economy")
+	if len(seats) != 6 {
+		t.Errorf("GetSeats returned wrong number of seats")
+	}
+	if seats[0].GetSeatID() != "A1" {
+		t.Errorf("GetSeats returned wrong seat")
+	}
+	if flight.GetColumns("Economy") != 2 {
+		t.Errorf("GetColumns failed")
+	}
+	if flight.GetRows("Economy") != 3 {
+		t.Errorf("GetRows failed")
+	}
+	if flight.GetBasePrice("Economy") != 1000.0 {
+		t.Errorf("GetBasePrice failed")
+	}
+	if !flight.GetDeparture().Equal(flight.Departure) {
+		t.Errorf("GetDeparture failed")
+	}
+	if flight.GetMutex("Economy") == nil {
+		t.Errorf("GetMutex failed")
+	}
+	if flight.GetMutex("NonExist") != nil {
+		t.Errorf("GetMutex should return nil for missing class")
+	}
+}
+
+func TestMutexAdapter(t *testing.T) {
+	var m sync.Mutex
+	adapter := (*MutexAdapter)(&m)
+	adapter.Lock()
+	adapter.Unlock()
+}
+
+func TestSeatInterfaceType(t *testing.T) {
+	var s SeatInterface = &Seat{SeatID: "A1"}
+	if s.GetSeatID() != "A1" {
+		t.Errorf("SeatInterface not working")
+	}
+}
+
+func TestMutexInterfaceType(t *testing.T) {
+	var mtx MutexInterface = new(MutexAdapter)
+	mtx.Lock()
+	mtx.Unlock()
 }

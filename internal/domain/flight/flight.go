@@ -41,7 +41,6 @@ func (f *Flight) AddSeatClass(seatClass SeatClass, layout [][]*Seat, basePrice f
 				Special:  seat.Special,
 				IsBooked: false,
 			}
-
 			f.Seats[seatClass] = append(f.Seats[seatClass], &seat)
 		}
 	}
@@ -57,34 +56,67 @@ func (f *Flight) getAvailableSeats(seatClass SeatClass) []*Seat {
 	return availableSeats
 }
 
-func (f *Flight) BookBestSeat(seatClass SeatClass, bestSeat func([]*Seat, int, int) *Seat) (*Seat, float64, error) {
-	mutex, ok := f.Mutex[seatClass]
+func (f *Flight) GetSeats(seatClass string) []SeatInterface {
+	seats := f.Seats[SeatClass(seatClass)]
+	result := make([]SeatInterface, len(seats))
+	for i, s := range seats {
+		result[i] = s
+	}
+	return result
+}
+
+func (f *Flight) GetColumns(seatClass string) int {
+	return f.Columns[SeatClass(seatClass)]
+}
+
+func (f *Flight) GetRows(seatClass string) int {
+	return f.Rows[SeatClass(seatClass)]
+}
+
+func (f *Flight) GetBasePrice(seatClass string) float64 {
+	return f.BasePrices[SeatClass(seatClass)]
+}
+
+func (f *Flight) GetDeparture() time.Time {
+	return f.Departure
+}
+
+func (f *Flight) GetMutex(seatClass string) MutexInterface {
+	m, ok := f.Mutex[SeatClass(seatClass)]
 	if !ok {
-		return nil, 0, errNoSeatAvailable
+		return nil
 	}
-	mutex.Lock()
-	defer mutex.Unlock()
+	return (*MutexAdapter)(m)
+}
 
-	availableSeats := f.getAvailableSeats(seatClass)
-	totalSeats := len(f.Seats[seatClass])
-	if len(availableSeats) == 0 || totalSeats == 0 {
-		return nil, 0, errNoSeatAvailable
-	}
+func (s *Seat) GetSeatID() string {
+	return s.SeatID
+}
 
-	seat := bestSeat(availableSeats, f.Columns[seatClass], f.Rows[seatClass])
-	seat.IsBooked = true
+func (s *Seat) GetRow() int {
+	return s.Row
+}
 
-	// Calculate booked ratio
-	bookedCount := 0
-	for _, s := range f.Seats[seatClass] {
-		if s.IsBooked {
-			bookedCount++
-		}
-	}
-	bookedRatio := float64(bookedCount) / float64(totalSeats)
+func (s *Seat) GetColumn() int {
+	return s.Column
+}
 
-	basePrice := f.BasePrices[seatClass]
-	price := calculatePrice(basePrice, f.Departure, time.Now(), bookedRatio)
+func (s *Seat) GetSpecial() string {
+	return s.Special
+}
 
-	return seat, price, nil
+func (s *Seat) IsBookedSeat() bool {
+	return s.IsBooked
+}
+
+func (s *Seat) SetBooked(b bool) {
+	s.IsBooked = b
+}
+
+func (m *MutexAdapter) Lock() {
+	(*sync.Mutex)(m).Lock()
+}
+
+func (m *MutexAdapter) Unlock() {
+	(*sync.Mutex)(m).Unlock()
 }
